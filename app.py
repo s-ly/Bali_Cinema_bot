@@ -22,8 +22,8 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 # Инициализация
 ###################################################################################################
 # Переключение токенов
-API_TOKEN = tokenBots.workToken # рабочий бот
-# API_TOKEN = tokenBots.testToken # тестовый бот
+# API_TOKEN = tokenBots.workToken # рабочий бот
+API_TOKEN = tokenBots.testToken # тестовый бот
 
 # Инициируем бота
 storage = MemoryStorage() # хранение контекста в ОЗУ

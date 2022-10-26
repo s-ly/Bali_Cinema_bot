@@ -2,6 +2,22 @@
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
+import logging # модуль логирования
+
+
+# Конфигурация логирование
+# https://webdevblog.ru/logging-v-python/
+# level - уровень регистрации
+# filename - файл вывода
+# format - дата и само сообщение
+# datefmt - формат даты
+file_log = logging.FileHandler('app.log')
+console_out = logging.StreamHandler()
+logging.basicConfig(
+    level=logging.INFO, 
+    handlers=(file_log, console_out), 
+    format='%(asctime)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M')
 
 
 async def InItStateUser(message: types.Message, state: FSMContext):
@@ -17,7 +33,7 @@ async def InItStateUser(message: types.Message, state: FSMContext):
 
 async def print_userStatus (message: types.Message, state: FSMContext):
     """ 
-    Печатает данные пользователя 
+    Печатает данные пользователя на экран и в лог.
     """
     await InItStateUser(message, state)
     
@@ -29,9 +45,9 @@ async def print_userStatus (message: types.Message, state: FSMContext):
     firstName = str(allUserData['firstName'])
     lastName = str(allUserData['lastName'])
 
-    print('\nТекушие данный пользователя:')
-    print('userID: ' + userID)
-    print('userName: ' + userName)
-    print('firstName: ' + firstName)
-    print('lastName: ' + lastName)
-    print('FSM: ' + userState)
+    logging.info('Текушие данный пользователя:')
+    logging.info('userID: ' + userID)
+    logging.info('userName: ' + userName)
+    logging.info('firstName: ' + firstName)
+    logging.info('lastName: ' + lastName)
+    logging.info('FSM: ' + userState + '\n')
