@@ -93,7 +93,11 @@ inKey_payMethod.add(inBut_usdt)
 async def choiceSeats(message: types.Message, state: FSMContext):
     """
     Отвечает на ввод кол-ва мест. 
-    """    
+    Записывает ответ пользователя (кол-во мест) в виде типа int.
+
+    """ 
+    # await state.update_data(number_seats=int(message.text))    
+    await state.update_data(number_seats=message.text)    
     await StateGroupFSM.usStat_telegramNick.set() # Инициирует сост-е пользователя 
     await message.answer('Введите свой ник в Телеграме:.')
     await func.print_userStatus(message, state)
@@ -135,10 +139,12 @@ async def sendPayScreen(message: types.Message, state: FSMContext):
 @dp.message_handler(state='*')
 async def all_mess(message: types.Message, state: FSMContext):
     """
-    Отвечает на всё, в любом состоянии. Выводит кнопку для просмотра информации о событии.
+    Отвечает на всё, в любом состоянии. Инициирует все данные.
+    Выводит кнопку для просмотра информации о событии.
     Ещё показывает в консоль текущее состояние пользователя, 
     которое должно быть userState_default.
     """
+    await func.InItStateUser(message, state) # Инициирует данные пользователя
     await StateGroupFSM.usStat_default.set() # Инициирует состояние пользователя
     await message.answer('Привет, я бот для записи в кино.', reply_markup=inKey_viewEventDetails)
     await func.print_userStatus(message, state)
