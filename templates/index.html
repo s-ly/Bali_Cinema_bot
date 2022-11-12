@@ -1,0 +1,32 @@
+<!-- 
+Главная страница. Наследуется от формы base.html
+-->
+
+{% extends 'base.html' %}
+
+{% block body %}
+    <h2>Данные пользователей</h2>    
+
+    <!-- Цикл, формирует несколько блоков текста из переданного списка -->
+    <!-- input type="hidden" - скрытое поле для определения, какой блок редактировали. -->
+    {% for i in the_all_data %}
+        <form method="post" action="/user_edit">
+            <fieldset>
+                <legend>user id: {{i[0]}}</legend>
+                <b>Данные из Телеграма:</b><br>
+                username: {{i[1]}}<br>
+                first_name: {{i[2]}}<br>
+                last_name: {{i[3]}}<br><br>
+                <b>Данные ввёл пользователь:</b><br>
+                contact: {{i[4]}}<br>
+                real_name: {{i[5]}}<br><br>
+                <b>Состояние бронирования:</b><br>
+                pay_status: {{i[6]}}<br>
+                <input type="hidden" name="user_id" value={{i[0]}}>
+                <input type="submit" value="Подтвердить бронирование">
+            </fieldset>
+        </form>
+        <br>
+    {% endfor %}
+
+{% endblock %}

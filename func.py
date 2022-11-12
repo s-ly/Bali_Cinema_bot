@@ -2,9 +2,10 @@
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-import logging
+import logging # модуль логирования
+import sql_func # мой модуль
 
-from app import name # модуль логирования
+# from app import name # модуль логирования
 
 
 # Конфигурация логирование
@@ -26,7 +27,7 @@ async def InItStateUser(message: types.Message, state: FSMContext):
     """ 
     Инициирует данные пользователя.
     Если id есть в списке, то этот пользователь админ, ему меняю статус admin на True.
-    """        
+    """      
     users_admin = {'Segey': '80315171'}
     await state.update_data(userID=message.chat.id)
     await state.update_data(userName=message.chat.username)
@@ -35,9 +36,28 @@ async def InItStateUser(message: types.Message, state: FSMContext):
     await state.update_data(admin=False)
     await state.update_data(number_seats=None)
     await state.update_data(pay_method=None)
-    await state.update_data(telegram_nick=None)
-    await state.update_data(name=None)
+    await state.update_data(contact=None)
+    await state.update_data(real_name=None)
+    await state.update_data(pay_status=None)
+        
+    userId = str(message.chat.id)
+    
+    # Проверка есть ли в БД, если нет то вносим
+    if sql_func.sql_User_contained(userId):
+        sql_func.sql_add_NewUser(userId)
+        logging.info('Добавлен новый Юзер: ' + userId)        
+        sql_func.sql_change_userData(userId, 'username', message.chat.username)
+        sql_func.sql_change_userData(userId, 'first_name', message.chat.first_name)
+        sql_func.sql_change_userData(userId, 'last_name', message.chat.last_name)
+        sql_func.sql_change_userData(userId, 'pay_status', None)
+    else:
+        # иначе только обновляем данные
+        sql_func.sql_change_userData(userId, 'username', message.chat.username)
+        sql_func.sql_change_userData(userId, 'first_name', message.chat.first_name)
+        sql_func.sql_change_userData(userId, 'last_name', message.chat.last_name)
+        sql_func.sql_change_userData(userId, 'pay_status', None)
 
+    
     # Проверка на админа
     allUserData = await state.get_data() 
     userID = str(allUserData['userID'])
@@ -62,8 +82,9 @@ async def print_userStatus (message: types.Message, state: FSMContext):
     admim = str(allUserData['admin'])
     number_seats = str(allUserData['number_seats'])
     pay_method = str(allUserData['pay_method'])
-    telegram_nick = str(allUserData['telegram_nick'])
-    name = str(allUserData['name'])
+    contact = str(allUserData['contact'])
+    real_name = str(allUserData['real_name'])
+    pay_status = str(allUserData['pay_status'])
 
     logging.info('Текушие данный пользователя:')
     logging.info('userID: ' + userID)
@@ -73,6 +94,7 @@ async def print_userStatus (message: types.Message, state: FSMContext):
     logging.info('Admin: ' + admim)
     logging.info('number_seats: ' + number_seats)
     logging.info('pay_method: ' + pay_method)
-    logging.info('telegram_nick: ' + telegram_nick)
-    logging.info('name: ' + name)
+    logging.info('contact: ' + contact)
+    logging.info('real_name: ' + real_name)
+    logging.info('pay_status: ' + pay_status)
     logging.info('FSM: ' + userState + '\n')

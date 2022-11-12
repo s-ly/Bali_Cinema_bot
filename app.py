@@ -9,6 +9,7 @@ from aiogram.types import InlineKeyboardMarkup # Инлайн-клавиатур
 from aiogram.types import InlineKeyboardButton # Инлайн-кнопки
 import tokenBots                               # мои токены
 import func                                    # мой модуль с токинами
+import sql_func                                # мой модуль с sql
 
 # Машина состояний
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -22,8 +23,8 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 # Инициализация
 ###################################################################################################
 # Переключение токенов
-# API_TOKEN = tokenBots.workToken # рабочий бот
-API_TOKEN = tokenBots.testToken # тестовый бот
+API_TOKEN = tokenBots.workToken # рабочий бот
+# API_TOKEN = tokenBots.testToken # тестовый бот
 
 # Инициируем бота
 storage = MemoryStorage() # хранение контекста в ОЗУ
@@ -34,8 +35,8 @@ dp = Dispatcher(bot, storage=storage)
 class StateGroupFSM(StatesGroup):
     usStat_default = State()  # по умолчанию
     usStat_choiceSeats = State()  # выбор кол-ва мест
-    usStat_telegramNick = State()  # идёт ввод Телеграм-ника
-    usStat_name = State()  # идёт ввод имя пользователя
+    usStat_contact = State()  # идёт ввод контакты
+    usStat_realName = State()  # идёт ввод имя пользователя
     usStat_paySelect = State()  # идёт выбор способа оплаты
     usStat_paySelectCompleted = State()  # выбран способ оплаты
     usStat_sendPayScreen = State()  # отправь принскрин оплаты
@@ -47,6 +48,7 @@ class StateGroupFSM(StatesGroup):
 inKey_viewEventDetails = InlineKeyboardMarkup()
 inKey_bookTicket = InlineKeyboardMarkup()
 inKey_payMethod = InlineKeyboardMarkup()
+inKey_checkBooking= InlineKeyboardMarkup()
 
 butData_viewEventDetails = [
     'Посмотреть информацию о событии', 
@@ -63,6 +65,10 @@ butData_rupees = [
 butData_usdt = [
     'USDT', 
     'usdt']
+
+butData_checkBooking = [
+    'Проверить бронь', 
+    'checkBooking']
 
 
 inBut_viewEventDetails = InlineKeyboardButton(
@@ -85,6 +91,11 @@ inBut_usdt = InlineKeyboardButton(
     callback_data=butData_usdt[1])
 inKey_payMethod.add(inBut_usdt)
 
+inBut_checkBooking = InlineKeyboardButton(
+    text=butData_checkBooking[0], 
+    callback_data=butData_checkBooking[1])
+inKey_checkBooking.add(inBut_checkBooking)
+
 
 ###################################################################################################
 # Слушаем сообщения
@@ -98,27 +109,31 @@ async def choiceSeats(message: types.Message, state: FSMContext):
     """ 
     # await state.update_data(number_seats=int(message.text))    
     await state.update_data(number_seats=message.text)    
-    await StateGroupFSM.usStat_telegramNick.set() # Инициирует сост-е пользователя 
-    await message.answer('Введите свой ник в Телеграме:.')
+    await StateGroupFSM.usStat_contact.set() # Инициирует сост-е пользователя 
+    await message.answer('Введите свой ник в Телеграме или телефон:')
     await func.print_userStatus(message, state)
 
 
-@dp.message_handler(state=StateGroupFSM.usStat_telegramNick)
+@dp.message_handler(state=StateGroupFSM.usStat_contact)
 async def telegramNick(message: types.Message, state: FSMContext):
     """
     Отвечает на ввод Телеграм-ника. 
+    Вносит методом update_data() введённый ник Телеграм  в данные пользователя.
     """    
-    await StateGroupFSM.usStat_name.set() # Инициирует сост-е пользователя 
+    await state.update_data(contact=message.text)   
+    await StateGroupFSM.usStat_realName.set() # Инициирует сост-е пользователя 
     await message.answer('Введите ваше Имя:')
     await func.print_userStatus(message, state)
 
 
-@dp.message_handler(state=StateGroupFSM.usStat_name)
+@dp.message_handler(state=StateGroupFSM.usStat_realName)
 async def name(message: types.Message, state: FSMContext):
     """
     Отвечает на ввод Имени пользователя. 
+    Вносит методом update_data() введённое имя пользователя в данные пользователя.
     Вывродит кнопки выбора способа оплаты.
     """    
+    await state.update_data(real_name=message.text) 
     await StateGroupFSM.usStat_paySelect.set() # Инициирует сост-е пользователя 
     await message.answer('Оплатить x * y. Выберите способ оплаты:', reply_markup=inKey_payMethod)
     await func.print_userStatus(message, state)
@@ -131,9 +146,8 @@ async def sendPayScreen(message: types.Message, state: FSMContext):
     Состояние - когда выбран способ оплаты
     """    
     await StateGroupFSM.usStat_sendPayScreen.set() # Сост-е: получен скриншот 
-    await message.answer('бронь ожидает')
+    await message.answer('бронь ожидает', reply_markup=inKey_checkBooking)
     await func.print_userStatus(message, state)
-    
 
 
 @dp.message_handler(state='*')
@@ -207,6 +221,28 @@ async def callbackInline_inBut_usdt(
     await call_inline.message.answer(textAnswer)
     await call_inline.message.answer(textAnswwerScreen)
     await func.print_userStatus(call_inline.message, state)
+
+
+@dp.callback_query_handler(text=butData_checkBooking[1], state=StateGroupFSM.usStat_sendPayScreen)
+async def callbackInline_inBut_checkBooking(
+    call_inline: types.CallbackQuery, state: FSMContext):
+    """
+    Отвечает на инлайн-кнопку - Проверить бронь.
+    Состояние - пользователь отправил фото оплаты.
+    """
+    await call_inline.answer('Хорошо')
+    allUserData = await state.get_data() # загружаем статусы пользователя
+    userID = str(allUserData['userID'])
+    SQL = f"SELECT pay_status FROM users WHERE id = {userID};"
+    pay_status = sql_func.sql_run(SQL)
+    pay_status = pay_status[0][0]
+    # print(pay_status)
+    
+    if pay_status == 'ok':
+        text = 'Забронированно, приятного простомтра!'
+        await call_inline.message.answer(text, reply_markup=inKey_checkBooking)
+    else:
+        await call_inline.message.answer('бронь ожидает', reply_markup=inKey_checkBooking)
 
 
 ###################################################################################################
